@@ -1,0 +1,65 @@
+name: yggdrasil-website-mirror
+
+services:
+  yggdrasil:
+    image: ghcr.io/yggdrasil-network/yggdrasil-go:latest
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    environment:
+      - YGG_PRIV_KEY=${YGG_PRIV_KEY:?YGG_PRIV_KEY is required}
+      - YGG_PEERS=${YGG_PEERS:?YGG_PEERS is required}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "Generating base config..."
+        mkdir -p /etc/yggdrasil
+        yggdrasil -genconf > /etc/yggdrasil/yggdrasil.conf
+        
+        if [ -n "$$YGG_PRIV_KEY" ]; then
+          echo "Syncing YGG_PRIV_KEY..."
+          sed -i "s|^\s*PrivateKey:.*|  PrivateKey: $$YGG_PRIV_KEY|g" /etc/yggdrasil/yggdrasil.conf
+        fi
+
+        cat /etc/yggdrasil/yggdrasil.conf
+
+        if [ -n "$$YGG_PEERS" ]; then
+          echo "Syncing peers from YGG_PEERS..."
+          LIST=""
+          for p in $$YGG_PEERS; do
+            LIST="$$LIST \"$$p\","
+          done
+          sed -i "s|Peers:\s*\[.*\]|Peers: [$$LIST]|g" /etc/yggdrasil/yggdrasil.conf
+        fi
+        
+        exec yggdrasil -useconffile /etc/yggdrasil/yggdrasil.conf
+
+  proxy:
+    image: nginx:alpine
+    network_mode: "service:yggdrasil"
+    environment:
+      - TARGET_DOMAIN=${TARGET_DOMAIN:?TARGET_DOMAIN is required}
+    command: |
+      sh -c 'cat <<EOF > /etc/nginx/conf.d/default.conf
+      server {
+          listen [::]:80 default_server;
+          server_name _;
+          location / {
+              proxy_pass https://$$TARGET_DOMAIN;
+              proxy_set_header Host $$TARGET_DOMAIN;
+              proxy_ssl_server_name on;
+              proxy_set_header X-Real-IP \$$remote_addr;
+              proxy_set_header X-Forwarded-For \$$proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto \$$scheme;
+          }
+      }
+      EOF
+      exec nginx -g "daemon off;"'
+    restart: unless-stopped
+    depends_on:
+      - yggdrasil
