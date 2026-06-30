@@ -56,6 +56,19 @@ services:
               proxy_set_header X-Real-IP \$$remote_addr;
               proxy_set_header X-Forwarded-For \$$proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto \$$scheme;
+
+              # Prevent backend from zipping the response so Nginx can rewrite the content
+              proxy_set_header Accept-Encoding "";
+
+              # Rewrite absolute redirects from backend
+              proxy_redirect https://$$TARGET_DOMAIN/ /;
+              proxy_redirect http://$$TARGET_DOMAIN/ /;
+
+              # Rewrite absolute links in HTML to the mirror host
+              sub_filter_once off;
+              sub_filter_types text/html;
+              sub_filter "https://$$TARGET_DOMAIN" "http://\$$host";
+              sub_filter "http://$$TARGET_DOMAIN" "http://\$$host";
           }
       }
       EOF
