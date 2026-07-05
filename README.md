@@ -19,7 +19,7 @@ You don't need to clone this repository. Run the setup directly using the raw Co
 YGG_PRIV_KEY="<YOUR_GENERATED_PRIVATE_KEY>" \
 YGG_PEERS="tcp://1.2.3.4:12345 tls://5.6.7.8:9012" \
 TARGET_DOMAIN="asriyan.me" \
-docker compose -f <(curl -fsSL https://raw.githubusercontent.com/ed-asriyan/yggdrasil-website-mirror/master/docker-compose.yml) up -d
+docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/ed-asriyan/yggdrasil-website-mirror/master/docker-compose.yml) up -d
 ```
 
 | Variable | Required | Description |
@@ -28,11 +28,15 @@ docker compose -f <(curl -fsSL https://raw.githubusercontent.com/ed-asriyan/yggd
 | `TARGET_DOMAIN` | Yes | The clearnet domain to proxy to (e.g., asriyan.me). Must support HTTPS. |
 | `YGG_PEERS` | Yes | A space-separated list of Yggdrasil peers. *Find active public peers at [Yggdrasil Public Peers](https://publicpeers.neilalexander.dev).* |
 
+*Also you can replace `my-website` with your preferred project name. It will be used as the container name prefix.*
+
 ### 3. Get your Yggdrasil IPv6 Address
 Retrieve the IPv6 address assigned to your container's tun0 interface:
 ```bash
-docker compose -p yggdrasil-website-mirror logs yggdrasil | grep "Your IPv6 address is"
+docker compose -p my-website logs yggdrasil | grep "Your IPv6 address is"
 ```
+
+*Remember to replace `my-website` with your project name if you changed it in Step 2.*
 
 ### 4. Register in Alfis DNS (optional)
 1. Open your [Alfis GUI](https://alfis.name).
