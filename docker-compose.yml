@@ -44,34 +44,65 @@ services:
     network_mode: "service:yggdrasil"
     environment:
       - TARGET_DOMAIN=${TARGET_DOMAIN:?TARGET_DOMAIN is required}
+      - ADDITIONAL_DOMAINS=${ADDITIONAL_DOMAINS:-}
     command: |
-      sh -c 'cat <<EOF > /etc/nginx/conf.d/default.conf
+      sh -c '
+      CONF=/etc/nginx/conf.d/default.conf
+      echo "" > $$CONF
+      
+      PORT=80
+      rm -f /tmp/domain_map
+      
+      # Create a mapping of domains to ports
+      for d in $$TARGET_DOMAIN $$ADDITIONAL_DOMAINS; do
+          echo "$$d $$PORT" >> /tmp/domain_map
+          PORT=$$((PORT+1))
+      done
+      
+      # Generate Nginx configuration for each domain
+      while read DOMAIN D_PORT; do
+          cat <<EOF >> $$CONF
       server {
-          listen [::]:80 default_server;
+          listen [::]:$$D_PORT $$( [ "$$D_PORT" = "80" ] && echo "default_server" );
           server_name _;
+          
           location / {
-              proxy_pass https://$$TARGET_DOMAIN;
-              proxy_set_header Host $$TARGET_DOMAIN;
+              proxy_pass https://$$DOMAIN;
+              proxy_set_header Host $$DOMAIN;
               proxy_ssl_server_name on;
               proxy_set_header X-Real-IP \$$remote_addr;
               proxy_set_header X-Forwarded-For \$$proxy_add_x_forwarded_for;
               proxy_set_header X-Forwarded-Proto \$$scheme;
-
-              # Prevent backend from zipping the response so Nginx can rewrite the content
               proxy_set_header Accept-Encoding "";
 
-              # Rewrite absolute redirects from backend
-              proxy_redirect https://$$TARGET_DOMAIN/ /;
-              proxy_redirect http://$$TARGET_DOMAIN/ /;
+              proxy_redirect https://$$DOMAIN/ /;
+              proxy_redirect http://$$DOMAIN/ /;
 
-              # Rewrite absolute links in HTML to the mirror host
               sub_filter_once off;
-              sub_filter_types text/html;
-              sub_filter "https://$$TARGET_DOMAIN" "http://\$$host";
-              sub_filter "http://$$TARGET_DOMAIN" "http://\$$host";
+              # Replace links not only in HTML but also in JSON/JS if the frontend dynamically constructs URLs
+              sub_filter_types text/html application/json application/javascript;
+      EOF
+      
+          # Generate sub_filter rules for each domain mapping
+          while read SUB_DOMAIN SUB_PORT; do
+              if [ "$$SUB_PORT" = "80" ]; then
+                  REPLACE="http://\$$host"
+              else
+                  REPLACE="http://\$$host:$$SUB_PORT"
+              fi
+              echo "        sub_filter \"https://$$SUB_DOMAIN\" \"$$REPLACE\";" >> $$CONF
+              echo "        sub_filter \"http://$$SUB_DOMAIN\" \"$$REPLACE\";" >> $$CONF
+          done < /tmp/domain_map
+      
+          cat <<EOF >> $$CONF
           }
       }
       EOF
+      done < /tmp/domain_map
+      
+      echo "=== Generated Nginx Config ==="
+      cat $$CONF
+      
       exec nginx -g "daemon off;"'
     restart: unless-stopped
     depends_on:

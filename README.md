@@ -19,6 +19,7 @@ You don't need to clone this repository. Run the setup directly using the raw Co
 YGG_PRIV_KEY="<YOUR_GENERATED_PRIVATE_KEY>" \
 YGG_PEERS="tcp://1.2.3.4:12345 tls://5.6.7.8:9012" \
 TARGET_DOMAIN="asriyan.me" \
+ADDITIONAL_DOMAINS="api.asriyan.me cdn.asriyan.me" \
 docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/ed-asriyan/yggdrasil-website-mirror/master/docker-compose.yml) up -d
 ```
 
@@ -27,6 +28,7 @@ docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/e
 | `YGG_PRIV_KEY` | Yes | Your Yggdrasil private key. |
 | `TARGET_DOMAIN` | Yes | The clearnet domain to proxy to (e.g., asriyan.me). Must support HTTPS. |
 | `YGG_PEERS` | Yes | A space-separated list of Yggdrasil peers. *Find active public peers at [Yggdrasil Public Peers](https://publicpeers.neilalexander.dev).* |
+| `ADDITIONAL_DOMAINS` | No | A space-separated list of additional domains to proxy to. Must support HTTPS. | space-separated list of secondary domains (e.g., API endpoints, CDN domains, auth servers) required by the main site. |
 
 *Also you can replace `my-website` with your preferred project name. It will be used as the container name prefix.*
 
