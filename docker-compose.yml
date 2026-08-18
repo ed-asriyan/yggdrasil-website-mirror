@@ -93,8 +93,8 @@ services:
               add_header X-Cache-Status \$$upstream_cache_status;
 
               sub_filter_once off;
-              # Replace links not only in HTML but also in JSON/JS if the frontend dynamically constructs URLs
-              sub_filter_types text/html application/json application/javascript;
+              # * matches any MIME type, so direct links get rewritten regardless of response content type
+              sub_filter_types *;
       EOF
       
           # Generate sub_filter rules for each domain mapping
