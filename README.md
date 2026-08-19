@@ -18,17 +18,17 @@ You don't need to clone this repository. Run the setup directly using the raw Co
 ```bash
 YGG_PRIV_KEY="<YOUR_GENERATED_PRIVATE_KEY>" \
 YGG_PEERS="tcp://1.2.3.4:12345 tls://5.6.7.8:9012" \
-TARGET_DOMAIN="asriyan.me" \
-ADDITIONAL_DOMAINS="api.asriyan.me cdn.asriyan.me" \
+TARGET_DOMAIN="https://asriyan.me" \
+ADDITIONAL_DOMAINS="https://api.asriyan.me https://cdn.asriyan.me" \
 docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/ed-asriyan/yggdrasil-website-mirror/master/docker-compose.yml) up -d
 ```
 
 | Variable | Required | Description |
 | -------- | -------- | ----------- |
 | `YGG_PRIV_KEY` | Yes | Your Yggdrasil private key. |
-| `TARGET_DOMAIN` | Yes | The clearnet domain to proxy to (e.g., asriyan.me). Must support HTTPS. |
+| `TARGET_DOMAIN` | Yes | The clearnet domain to proxy to. Must include the scheme (e.g., `https://asriyan.me` or `http://example.com:8080`). |
 | `YGG_PEERS` | Yes | A space-separated list of Yggdrasil peers. *Find active public peers at [Yggdrasil Public Peers](https://publicpeers.neilalexander.dev).* |
-| `ADDITIONAL_DOMAINS` | No | A space-separated list of additional domains to proxy to (e.g., API endpoints, CDN domains, auth servers) required by the main site. Must support HTTPS. Each entry can be `host` or `host:port` (e.g. `xftp.example.com:8443`) if the upstream listens on a non-standard port. |
+| `ADDITIONAL_DOMAINS` | No | A space-separated list of additional domains to proxy to (e.g., API endpoints, CDN domains, auth servers) required by the main site. Each entry **must include the scheme** (`http://` or `https://`) and can optionally specify a port (e.g., `https://api.asriyan.me` or `http://xftp.example.com:8080`). |
 
 *Also you can replace `my-website` with your preferred project name. It will be used as the container name prefix.*
 
