@@ -28,9 +28,11 @@ docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/e
 | `YGG_PRIV_KEY` | Yes | Your Yggdrasil private key. |
 | `TARGET_DOMAIN` | Yes | The clearnet domain to proxy to (e.g., asriyan.me). Must support HTTPS. |
 | `YGG_PEERS` | Yes | A space-separated list of Yggdrasil peers. *Find active public peers at [Yggdrasil Public Peers](https://publicpeers.neilalexander.dev).* |
-| `ADDITIONAL_DOMAINS` | No | A space-separated list of additional domains to proxy to. Must support HTTPS. | space-separated list of secondary domains (e.g., API endpoints, CDN domains, auth servers) required by the main site. |
+| `ADDITIONAL_DOMAINS` | No | A space-separated list of additional domains to proxy to (e.g., API endpoints, CDN domains, auth servers) required by the main site. Must support HTTPS. Each entry can be `host` or `host:port` (e.g. `xftp.example.com:8443`) if the upstream listens on a non-standard port. |
 
 *Also you can replace `my-website` with your preferred project name. It will be used as the container name prefix.*
+
+Each mirrored domain gets its own listening port (`TARGET_DOMAIN` on 80, each `ADDITIONAL_DOMAINS` entry on 81, 82, ...). Responses are cached by Nginx (`proxy_cache`, 100MB, entries expire after 10 minutes) to reduce load and request rate on the origin servers. Nginx also rewrites occurrences of the real domain (with or without scheme, including bare `"host"`/`"host:port"` strings found in API/JSON responses) to point back to the mirror, so clients don't leak or connect directly to the original clearnet addresses.
 
 ### 3. Get your Yggdrasil IPv6 Address
 Retrieve the IPv6 address assigned to your container's tun0 interface:

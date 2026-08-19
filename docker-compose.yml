@@ -58,21 +58,25 @@ services:
       PORT=80
       rm -f /tmp/domain_map
       
-      # Create a mapping of domains to ports
+      # Create a mapping of domains to ports. Entries may be "host" or "host:upstream_port"
       for d in $$TARGET_DOMAIN $$ADDITIONAL_DOMAINS; do
-          echo "$$d $$PORT" >> /tmp/domain_map
+          case "$$d" in
+              *:*) UP_HOST="$${d%%:*}"; UP_PORT="$${d##*:}" ;;
+              *) UP_HOST="$$d"; UP_PORT=443 ;;
+          esac
+          echo "$$UP_HOST $$UP_PORT $$PORT" >> /tmp/domain_map
           PORT=$$((PORT+1))
       done
       
       # Generate Nginx configuration for each domain
-      while read DOMAIN D_PORT; do
+      while read DOMAIN UP_PORT D_PORT; do
           cat <<EOF >> $$CONF
       server {
           listen [::]:$$D_PORT $$( [ "$$D_PORT" = "80" ] && echo "default_server" );
           server_name _;
           
           location / {
-              proxy_pass https://$$DOMAIN;
+              proxy_pass https://$$DOMAIN:$$UP_PORT;
               proxy_set_header Host $$DOMAIN;
               proxy_ssl_server_name on;
               proxy_set_header X-Real-IP \$$remote_addr;
@@ -98,7 +102,7 @@ services:
       EOF
       
           # Generate sub_filter rules for each domain mapping
-          while read SUB_DOMAIN SUB_PORT; do
+          while read SUB_DOMAIN SUB_UP_PORT SUB_PORT; do
               if [ "$$SUB_PORT" = "80" ]; then
                   REPLACE="http://\$$host"
               else
@@ -106,6 +110,13 @@ services:
               fi
               echo "        sub_filter \"https://$$SUB_DOMAIN\" \"$$REPLACE\";" >> $$CONF
               echo "        sub_filter \"http://$$SUB_DOMAIN\" \"$$REPLACE\";" >> $$CONF
+
+              # Bare "host" / "host:port" values (e.g. API JSON fields with no URL scheme) leak the real address too.
+              # Match the longer host:port form first so it does not get clobbered by the bare-host rule below.
+              if [ "$$SUB_UP_PORT" != "443" ]; then
+                  echo "        sub_filter \"$$SUB_DOMAIN:$$SUB_UP_PORT\" \"\$$host:$$SUB_PORT\";" >> $$CONF
+              fi
+              echo "        sub_filter \"$$SUB_DOMAIN\" \"\$$host:$$SUB_PORT\";" >> $$CONF
           done < /tmp/domain_map
       
           cat <<EOF >> $$CONF
