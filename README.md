@@ -8,10 +8,10 @@ No manual configuration files required. It spins up an Yggdrasil node and an Ngi
 You need a static private key so your node's IPv6 address remains constant across reboots. Generate one instantly with this one-liner:
 
 ```bash
-docker run --rm --entrypoint yggdrasil ghcr.io/yggdrasil-network/yggdrasil-go:latest -genconf | grep PrivateKey
+docker run --rm --entrypoint sh ghcr.io/yggdrasil-network/yggdrasil-go:latest -c 'yggdrasil -genconf > /tmp/c.conf && grep PrivateKey /tmp/c.conf && yggdrasil -useconffile /tmp/c.conf -address'
 ```
 
-(Save the output string, you will need it in the next step).
+Save the generated private key and IP address, you will need it in the next steps.
 
 ### 2. Run the Mirror
 You don't need to clone this repository. Run the setup directly using the raw Compose file:
@@ -34,16 +34,8 @@ docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/e
 
 Each mirrored domain gets its own listening port (`TARGET_DOMAIN` on 80, each `ADDITIONAL_DOMAINS` entry on 81, 82, ...). Responses are cached by Nginx (`proxy_cache`, 100MB, entries expire after 10 minutes) to reduce load and request rate on the origin servers. Nginx also rewrites occurrences of the real domain (with or without scheme, including bare `"host"`/`"host:port"` strings found in API/JSON responses) to point back to the mirror, so clients don't leak or connect directly to the original clearnet addresses.
 
-### 3. Get your Yggdrasil IPv6 Address
-Retrieve the IPv6 address assigned to your container's tun0 interface:
-```bash
-docker compose -p my-website logs yggdrasil | grep "Your IPv6 address is"
-```
-
-*Remember to replace `my-website` with your project name if you changed it in Step 2.*
-
-### 4. Register in Alfis DNS (optional)
+### 3. Register in Alfis DNS (optional)
 1. Open your [Alfis GUI](https://alfis.name).
 2. Mine a new key if you haven't done it before
 3. Register your target .ygg domain.
-4. Create an AAAA record pointing to the IPv6 address obtained in Step 3.
+4. Create an AAAA record pointing to the IPv6 address obtained in Step 1.
