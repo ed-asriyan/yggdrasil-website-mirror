@@ -114,6 +114,11 @@ services:
               proxy_set_header X-Forwarded-Proto \$$scheme;
               proxy_set_header Accept-Encoding "";
 
+              # some upstreams (e.g. Supabase/Kong) send response headers larger than the default nginx buffers, causing "upstream sent too big header"
+              proxy_buffer_size 128k;
+              proxy_buffers 4 256k;
+              proxy_busy_buffers_size 256k;
+
               proxy_redirect https://$$DOMAIN/ /;
               proxy_redirect http://$$DOMAIN/ /;
 
