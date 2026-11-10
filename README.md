@@ -28,6 +28,7 @@ docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/e
 | `YGG_PRIV_KEY` | Yes | Your Yggdrasil private key. |
 | `TARGET_DOMAIN` | Yes | The clearnet domain to proxy to. Must include the scheme (e.g., `https://asriyan.me` or `http://example.com:8080`). |
 | `YGG_PEERS` | Yes | A space-separated list of Yggdrasil peers. *Find active public peers at [Yggdrasil Public Peers](https://publicpeers.neilalexander.dev).* |
+| `YGG_NODE_NAME` | No | Human-readable node name, published in the Yggdrasil [NodeInfo](https://yggdrasil-network.github.io/configurationref.html) (`name` key). Network maps and crawlers show it instead of just the public key/IPv6. Not set by default. |
 | `ADDITIONAL_DOMAINS` | No | A space-separated list of additional domains to proxy to (e.g., API endpoints, CDN domains, auth servers) required by the main site. Each entry **must include the scheme** (`http://` or `https://`) and can optionally specify a port (e.g., `https://api.asriyan.me` or `http://xftp.example.com:8080`). |
 
 *Also you can replace `my-website` with your preferred project name. It will be used as the container name prefix.*
