@@ -13,6 +13,7 @@ services:
     environment:
       - YGG_PRIV_KEY=${YGG_PRIV_KEY:?YGG_PRIV_KEY is required}
       - YGG_PEERS=${YGG_PEERS:?YGG_PEERS is required}
+      - YGG_NODE_NAME=${YGG_NODE_NAME:-}
     entrypoint:
       - /bin/sh
       - -c
@@ -24,6 +25,13 @@ services:
         if [ -n "$$YGG_PRIV_KEY" ]; then
           echo "Syncing YGG_PRIV_KEY..."
           sed -i "s|^\s*PrivateKey:.*|  PrivateKey: $$YGG_PRIV_KEY|g" /etc/yggdrasil/yggdrasil.conf
+        fi
+
+        if [ -n "$$YGG_NODE_NAME" ]; then
+          echo "Setting node name from YGG_NODE_NAME..."
+          # escape for JSON (\ and ") first, then for the sed replacement (\, & and the | delimiter)
+          NODE_NAME=$$(printf '%s' "$$YGG_NODE_NAME" | sed 's/\\/\\\\/g; s/"/\\"/g' | sed 's/[\\&|]/\\&/g')
+          sed -i "s|^\s*NodeInfo:.*|  NodeInfo: {\"name\": \"$$NODE_NAME\"}|" /etc/yggdrasil/yggdrasil.conf
         fi
 
         cat /etc/yggdrasil/yggdrasil.conf
