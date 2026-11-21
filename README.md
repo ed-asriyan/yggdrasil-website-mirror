@@ -33,7 +33,7 @@ docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/e
 
 *Also you can replace `my-website` with your preferred project name. It will be used as the container name prefix.*
 
-Each mirrored domain gets its own listening port (`TARGET_DOMAIN` on 80, each `ADDITIONAL_DOMAINS` entry on 81, 82, ...). Responses are cached by Nginx (`proxy_cache`, 100MB, entries expire after 10 minutes) to reduce load and request rate on the origin servers. Nginx also rewrites occurrences of the real domain (with or without scheme, including bare `"host"`/`"host:port"` strings found in API/JSON responses) to point back to the mirror, so clients don't leak or connect directly to the original clearnet addresses.
+Each mirrored domain gets its own listening port (`TARGET_DOMAIN` on 80, each `ADDITIONAL_DOMAINS` entry on 81, 82, ...). Responses are cached by Nginx (`proxy_cache`, 100MB, entries expire after 10 minutes) to reduce load and request rate on the origin servers. Nginx also rewrites occurrences of the real domain (with or without scheme, including bare `"host"`/`"host:port"` strings found in API/JSON responses) to point back to the mirror, and does the same for redirects (`Location` headers) to any of the mirrored domains, so clients don't leak or connect directly to the original clearnet addresses.
 
 ### 3. Register in Alfis DNS (optional)
 1. Open your [Alfis GUI](https://alfis.name).
