@@ -7,7 +7,7 @@
 
 services:
   origin:
-    image: python:3.13-alpine
+    image: python:3.15-alpine
     command: ["python", "-u", "/origin/server.py", "/certs/origin.crt", "/certs/origin.key"]
     volumes:
       - ${E2E_ORIGIN_DIR:?E2E_ORIGIN_DIR is required}:/origin:ro
