@@ -2,7 +2,7 @@ name: yggdrasil-website-mirror
 
 services:
   yggdrasil:
-    image: ghcr.io/yggdrasil-network/yggdrasil-go:latest
+    image: ghcr.io/yggdrasil-network/yggdrasil-go:v0.5.14
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
@@ -48,7 +48,7 @@ services:
         exec yggdrasil -useconffile /etc/yggdrasil/yggdrasil.conf
 
   proxy:
-    image: nginx:alpine
+    image: nginx:1.31.9-alpine
     network_mode: "service:yggdrasil"
     environment:
       - TARGET_DOMAIN=${TARGET_DOMAIN:?TARGET_DOMAIN is required}
