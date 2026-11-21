@@ -39,7 +39,7 @@ jobs:
           sudo install -m 755 yggdrasil-pkg/usr/bin/yggdrasil yggdrasil-pkg/usr/bin/yggdrasilctl /usr/local/bin/
           yggdrasil -version
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: matrix.scenario == 'mirror'
         with:
           python-version: "3.12"
