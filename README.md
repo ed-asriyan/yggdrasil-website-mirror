@@ -33,10 +33,23 @@ docker compose -p my-website -f <(curl -fsSL https://raw.githubusercontent.com/e
 
 *Also you can replace `my-website` with your preferred project name. It will be used as the container name prefix.*
 
-Each mirrored domain gets its own listening port (`TARGET_DOMAIN` on 80, each `ADDITIONAL_DOMAINS` entry on 81, 82, ...). Responses are cached by Nginx (`proxy_cache`, 100MB, entries expire after 10 minutes) to reduce load and request rate on the origin servers. Nginx also rewrites occurrences of the real domain (with or without scheme, including bare `"host"`/`"host:port"` strings found in API/JSON responses) to point back to the mirror, so clients don't leak or connect directly to the original clearnet addresses.
+Each mirrored domain gets its own listening port (`TARGET_DOMAIN` on 80, each `ADDITIONAL_DOMAINS` entry on 81, 82, ...). Responses are cached by Nginx (`proxy_cache`, 100MB, entries expire after 10 minutes) to reduce load and request rate on the origin servers. Nginx also rewrites occurrences of the real domain (with or without scheme, including bare `"host"`/`"host:port"` strings found in API/JSON responses) to point back to the mirror, and does the same for redirects (`Location` headers) to any of the mirrored domains, so clients don't leak or connect directly to the original clearnet addresses.
 
 ### 3. Register in Alfis DNS (optional)
 1. Open your [Alfis GUI](https://alfis.name).
 2. Mine a new key if you haven't done it before
 3. Register your target .ygg domain.
 4. Create an AAAA record pointing to the IPv6 address obtained in Step 1.
+
+## 🧪 Tests
+End-to-end tests ([`tests/e2e.py`](tests/e2e.py), run by the [e2e workflow](.github/workflows/e2e.yml) on every push and pull request) bring up `docker-compose.yml` against a mock origin ([`tests/origin/server.py`](tests/origin/server.py), serving `site.test`, `api.test:8443` and `cdn.test:8080`):
+
+- **`mirror`**: the mirror peers with a Yggdrasil node started on the test host, and every request goes over Yggdrasil, as a visitor's would. Checks routing (Host, SNI) of every domain, link rewriting, redirects, caching (per domain and cookie, no caching of `Set-Cookie` responses), large upstream headers, the page in headless Chromium (every resource loads through the mirror) and the `YGG_NODE_NAME` published in NodeInfo.
+- **`config`**: missing required variables, domains without a scheme, and the generated Yggdrasil and Nginx configs of a minimal setup.
+
+Run locally (needs Docker, [`yggdrasil`/`yggdrasilctl`](https://github.com/yggdrasil-network/yggdrasil-go/releases), `openssl`; for `mirror` also root or passwordless sudo, IPv6 and Playwright):
+```bash
+pip install -r tests/requirements.txt && python -m playwright install chromium
+python3 tests/e2e.py --scenario mirror   # or: --scenario config
+```
+Logs of every container and a screenshot go to `--artifacts` (default: `<workdir>/artifacts`); `--keep` leaves the deployment running for debugging.
