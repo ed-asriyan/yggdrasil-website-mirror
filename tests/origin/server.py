@@ -136,14 +136,20 @@ class Handler(BaseHTTPRequestHandler):
             body = b"not found\n"
 
         self.send_response(status)
-        self.send_header("X-Echo-Host", self.headers.get("Host", ""))
+        self.send_header(
+            "X-Echo-Host",
+            self.headers.get("Host", "").replace("\r", "").replace("\n", ""),
+        )
         self.send_header("X-Echo-Sni", getattr(self.connection, "sni", None) or "")
         self.send_header("X-Echo-Scheme", self.scheme())
         self.send_header("X-Echo-Port", str(self.server.server_address[1]))
-        self.send_header("X-Echo-Accept-Encoding", self.headers.get("Accept-Encoding", ""))
+        self.send_header(
+            "X-Echo-Accept-Encoding",
+            self.headers.get("Accept-Encoding", "").replace("\r", "").replace("\n", ""),
+        )
         self.send_header("X-Origin-Count", str(count))
         for k, v in headers.items():
-            self.send_header(k, v)
+            self.send_header(k, v.replace("\r", "").replace("\n", ""))
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
