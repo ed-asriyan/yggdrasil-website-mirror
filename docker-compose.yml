@@ -127,12 +127,10 @@ services:
               proxy_buffers 4 256k;
               proxy_busy_buffers_size 256k;
 
-              proxy_redirect https://$$DOMAIN/ /;
-              proxy_redirect http://$$DOMAIN/ /;
-
               proxy_cache proxy_cache;
-              # include the request cookie in the key so different users/sessions do not share cached responses
-              proxy_cache_key \$$scheme\$$host\$$request_uri\$$http_cookie;
+              # include the request cookie in the key so different users/sessions do not share cached responses;
+              # every mirrored domain is the same \$$host on its own port, so the port keeps their entries apart
+              proxy_cache_key \$$scheme\$$host\$$server_port\$$request_uri\$$http_cookie;
               proxy_cache_valid 200 301 302 10m;
               proxy_cache_valid 404 1m;
               proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
@@ -147,21 +145,33 @@ services:
               sub_filter_types *;
       EOF
       
-          # Generate sub_filter rules for each domain mapping
+          # Generate sub_filter (bodies) and proxy_redirect (Location/Refresh headers) rules for each domain mapping,
+          # so links and redirects to any mirrored domain point back to the mirror
           while read SUB_UP_SCHEME SUB_DOMAIN SUB_UP_PORT SUB_PORT; do
               if [ "$$SUB_PORT" = "80" ]; then
                   REPLACE="http://\$$host"
               else
                   REPLACE="http://\$$host:$$SUB_PORT"
               fi
-              echo "        sub_filter \"$$SUB_UP_SCHEME://$$SUB_DOMAIN\" \"$$REPLACE\";" >> $$CONF
-              # Also sub_filter the alternative scheme just in case the backend returns it
+              # Also rewrite the alternative scheme just in case the backend returns it
               ALT_SCHEME=$$( [ "$$SUB_UP_SCHEME" = "https" ] && echo "http" || echo "https" )
-              echo "        sub_filter \"$$ALT_SCHEME://$$SUB_DOMAIN\" \"$$REPLACE\";" >> $$CONF
+              PORT_MATCH=$$( [ "$$SUB_UP_SCHEME" = "https" ] && echo 443 || echo 80 )
+
+              # URLs with an explicit non-default port go first: the scheme://host rule below would otherwise
+              # match them and leave the port behind (http://mirror:81:8443/...)
+              if [ "$$SUB_UP_PORT" != "$$PORT_MATCH" ]; then
+                  for S in $$SUB_UP_SCHEME $$ALT_SCHEME; do
+                      echo "        sub_filter \"$$S://$$SUB_DOMAIN:$$SUB_UP_PORT\" \"$$REPLACE\";" >> $$CONF
+                      echo "        proxy_redirect $$S://$$SUB_DOMAIN:$$SUB_UP_PORT/ $$REPLACE/;" >> $$CONF
+                  done
+              fi
+              for S in $$SUB_UP_SCHEME $$ALT_SCHEME; do
+                  echo "        sub_filter \"$$S://$$SUB_DOMAIN\" \"$$REPLACE\";" >> $$CONF
+                  echo "        proxy_redirect $$S://$$SUB_DOMAIN/ $$REPLACE/;" >> $$CONF
+              done
 
               # Bare "host" / "host:port" values (e.g. API JSON fields with no URL scheme) leak the real address too.
               # Match the longer host:port form first so it does not get clobbered by the bare-host rule below.
-              PORT_MATCH=$$( [ "$$SUB_UP_SCHEME" = "https" ] && echo 443 || echo 80 )
               if [ "$$SUB_UP_PORT" != "$$PORT_MATCH" ]; then
                   echo "        sub_filter \"$$SUB_DOMAIN:$$SUB_UP_PORT\" \"\$$host:$$SUB_PORT\";" >> $$CONF
               fi

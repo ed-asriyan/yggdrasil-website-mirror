@@ -1,0 +1,68 @@
+name: e2e
+
+# Brings up docker-compose.yml against a mock origin and checks the mirror over
+# Yggdrasil: routing, link and redirect rewriting, caching, the page in headless
+# Chromium and NodeInfo (scenario `mirror`), and configuration handling
+# (scenario `config`). See tests/e2e.py.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  YGGDRASIL_VERSION: 0.5.15
+
+jobs:
+  e2e:
+    name: ${{ matrix.scenario }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [mirror, config]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Yggdrasil
+        run: |
+          curl -fsSL -o yggdrasil.deb \
+            "https://github.com/yggdrasil-network/yggdrasil-go/releases/download/v${YGGDRASIL_VERSION}/yggdrasil-${YGGDRASIL_VERSION}-amd64.deb"
+          # Only the binaries: the package would also start a system-wide node.
+          dpkg-deb -x yggdrasil.deb yggdrasil-pkg
+          sudo install -m 755 yggdrasil-pkg/usr/bin/yggdrasil yggdrasil-pkg/usr/bin/yggdrasilctl /usr/local/bin/
+          yggdrasil -version
+
+      - uses: actions/setup-python@v5
+        if: matrix.scenario == 'mirror'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+
+      - name: Install Playwright
+        if: matrix.scenario == 'mirror'
+        run: |
+          pip install -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run e2e test
+        run: |
+          python3 tests/e2e.py \
+            --scenario "${{ matrix.scenario }}" \
+            --workdir "${RUNNER_TEMP}/e2e" \
+            --artifacts "${RUNNER_TEMP}/artifacts"
+
+      - name: Upload logs and screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-${{ matrix.scenario }}
+          path: ${{ runner.temp }}/artifacts
+          if-no-files-found: ignore
