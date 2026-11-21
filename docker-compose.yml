@@ -131,8 +131,9 @@ services:
               proxy_redirect http://$$DOMAIN/ /;
 
               proxy_cache proxy_cache;
-              # include the request cookie in the key so different users/sessions do not share cached responses
-              proxy_cache_key \$$scheme\$$host\$$request_uri\$$http_cookie;
+              # include the request cookie in the key so different users/sessions do not share cached responses;
+              # every mirrored domain is the same \$$host on its own port, so the port keeps their entries apart
+              proxy_cache_key \$$scheme\$$host\$$server_port\$$request_uri\$$http_cookie;
               proxy_cache_valid 200 301 302 10m;
               proxy_cache_valid 404 1m;
               proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
