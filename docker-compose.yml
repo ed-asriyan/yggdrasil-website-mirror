@@ -2,7 +2,7 @@ name: yggdrasil-website-mirror
 
 services:
   yggdrasil:
-    image: ghcr.io/yggdrasil-network/yggdrasil-go:v0.5.14
+    image: ghcr.io/yggdrasil-network/yggdrasil-go:v0.5.15
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
