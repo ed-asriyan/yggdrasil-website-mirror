@@ -1,0 +1,34 @@
+# Test-only overrides, merged on top of docker-compose.yml by tests/e2e.py.
+#
+# - A mock origin (tests/origin/server.py) stands in for the clearnet sites:
+#   site.test, api.test and cdn.test are its network aliases.
+# - The mirror's Yggdrasil node can peer with a node started on the test host,
+#   reachable as host.docker.internal (YGG_PEERS).
+
+services:
+  origin:
+    image: python:3.13-alpine
+    command: ["python", "-u", "/origin/server.py", "/certs/origin.crt", "/certs/origin.key"]
+    volumes:
+      - ${E2E_ORIGIN_DIR:?E2E_ORIGIN_DIR is required}:/origin:ro
+      - ${E2E_ORIGIN_CERTS:?E2E_ORIGIN_CERTS is required}:/certs:ro
+    networks:
+      default:
+        aliases:
+          - site.test
+          - api.test
+          - cdn.test
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; [socket.create_connection(('127.0.0.1', p), 1).close() for p in (443, 8443, 8080)]"]
+      interval: 1s
+      retries: 60
+
+  yggdrasil:
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  proxy:
+    # nginx resolves upstream names once, at startup
+    depends_on:
+      origin:
+        condition: service_healthy
