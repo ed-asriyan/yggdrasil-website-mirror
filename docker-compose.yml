@@ -48,7 +48,7 @@ services:
         exec yggdrasil -useconffile /etc/yggdrasil/yggdrasil.conf
 
   proxy:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.31.10-alpine
     network_mode: "service:yggdrasil"
     environment:
       - TARGET_DOMAIN=${TARGET_DOMAIN:?TARGET_DOMAIN is required}
